@@ -51,6 +51,21 @@ header p{font-size:14px; color:rgba(255,255,255,.72); line-height:1.6; margin-to
 .err{font-size:12.5px;color:var(--coral-tint);text-align:center;margin-top:10px;min-height:16px}
 .choose{font-size:11px; color:var(--coral-tint); letter-spacing:.12em; text-transform:uppercase; margin-bottom:12px; text-align:center}
 
+.pick{
+  display:block;width:100%;text-align:left;background:rgba(255,255,255,.065);
+  border:1.5px solid rgba(255,255,255,.17);border-radius:17px;padding:18px;margin-bottom:11px;
+  color:#fff;font-family:'Poppins',sans-serif;cursor:pointer;min-height:64px;
+}
+.pick:hover{background:rgba(255,255,255,.12);border-color:var(--coral-tint)}
+.pick:active{transform:scale(.985)}
+.pick-l{display:block;font-size:17px;font-weight:700}
+.pick-s{display:block;font-size:12.5px;color:rgba(255,255,255,.6);margin-top:3px}
+.switch{
+  display:block;width:100%;background:none;border:0;color:rgba(255,255,255,.45);
+  font-family:'Poppins',sans-serif;font-size:12.5px;cursor:pointer;padding:12px;min-height:44px;
+  text-decoration:underline;margin-top:4px;
+}
+.switch:hover{color:var(--coral-tint)}
 a.card{
   display:flex; align-items:center; gap:15px; text-decoration:none; color:inherit;
   background:rgba(255,255,255,.065); border:1.5px solid rgba(255,255,255,.17);
@@ -106,9 +121,23 @@ footer a:hover{text-decoration:underline}
     <div class="who-line">Signed in as <b id="userEmail"></b> <button class="signout" id="signoutBtn">Sign out</button></div>
   </div>
 
-  <div class="choose">Who's this for?</div>
+  <div id="chooser">
+    <div class="choose">Who's using this?</div>
+    <button class="pick" onclick="pickSide('m')">
+      <span class="pick-l">A man</span>
+      <span class="pick-s">Happy Wife, and Happy Children</span>
+    </button>
+    <button class="pick" onclick="pickSide('f')">
+      <span class="pick-l">A woman</span>
+      <span class="pick-s">Happy Husband, and Happy Children</span>
+    </button>
+  </div>
 
-  <a class="card" href="https://kolishema.github.io/HappyMarriage/">
+  <div id="picked" style="display:none">
+    <div class="choose" id="pickedLabel">For you</div>
+  </div>
+
+  <a class="card" data-for="f" href="https://kolishema.github.io/HappyMarriage/">
     <div class="ico">
       <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
     </div>
@@ -119,7 +148,7 @@ footer a:hover{text-decoration:underline}
     <span class="arrow" aria-hidden="true">&rsaquo;</span>
   </a>
 
-  <a class="card" href="https://kolishema.github.io/happy-wife-app/">
+  <a class="card" data-for="m" href="https://kolishema.github.io/happy-wife-app/">
     <div class="ico">
       <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><path d="M12 21.2V5.7"/></svg>
     </div>
@@ -130,7 +159,7 @@ footer a:hover{text-decoration:underline}
     <span class="arrow" aria-hidden="true">&rsaquo;</span>
   </a>
 
-  <a class="card" href="https://kolishema.github.io/HappyChildren/">
+  <a class="card" data-for="both" href="https://kolishema.github.io/HappyChildren/">
     <div class="ico">
       <svg viewBox="0 0 24 24"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M17 13a2.4 2.4 0 1 0 0-4.8 2.4 2.4 0 0 0 0 4.8z"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><path d="M17.5 15c2.6 0 4.5 2 4.5 4.4"/></svg>
     </div>
@@ -141,6 +170,8 @@ footer a:hover{text-decoration:underline}
     </div>
     <span class="arrow" aria-hidden="true">&rsaquo;</span>
   </a>
+
+  <button class="switch" id="switchBtn" style="display:none" onclick="clearSide()">Not you? Start again</button>
 
   <footer>
     Koli Shema &middot; <a href="https://kolishema.org">kolishema.org</a>
@@ -190,6 +221,47 @@ document.getElementById('signoutBtn').onclick = async function(){
 
 sb.auth.onAuthStateChange(function(_e, session){ paint(session); });
 sb.auth.getSession().then(function(r){ paint(r.data.session); }).catch(function(){ paint(null); });
+
+// ── who is this for ──────────────────────────────────────────
+// Remembered on this device so nobody answers it twice.
+const SIDE_KEY = 'kolishema-side';
+
+function applySide(side){
+  const chooser = document.getElementById('chooser');
+  const picked  = document.getElementById('picked');
+  const sw      = document.getElementById('switchBtn');
+  const cards   = [...document.querySelectorAll('a.card')];
+  if(!side){
+    chooser.style.display = '';
+    picked.style.display  = 'none';
+    sw.style.display      = 'none';
+    cards.forEach(c => c.style.display = 'none');
+    return;
+  }
+  chooser.style.display = 'none';
+  picked.style.display  = '';
+  sw.style.display      = '';
+  document.getElementById('pickedLabel').textContent = side === 'm' ? 'For you and your wife' : 'For you and your husband';
+  cards.forEach(c => {
+    const f = c.getAttribute('data-for');
+    c.style.display = (f === side || f === 'both') ? '' : 'none';
+  });
+}
+
+function pickSide(side){
+  try{ localStorage.setItem(SIDE_KEY, side); }catch(e){}
+  applySide(side);
+}
+function clearSide(){
+  try{ localStorage.removeItem(SIDE_KEY); }catch(e){}
+  applySide(null);
+}
+
+(function(){
+  let saved = null;
+  try{ saved = localStorage.getItem(SIDE_KEY); }catch(e){}
+  applySide(saved === 'm' || saved === 'f' ? saved : null);
+})();
 </script>
 </body>
 </html>
