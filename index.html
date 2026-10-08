@@ -186,7 +186,7 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
    so signing in here signs you into them too. */
 const sb = supabase.createClient(SB_URL, SB_KEY, {
   auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true,
-          storage: window.localStorage, storageKey: 'kolishema-auth', flowType: 'pkce' }
+          storage: window.localStorage, storageKey: 'kolishema-auth', flowType: 'implicit' }
 });
 
 function paint(session){
